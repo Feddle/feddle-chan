@@ -97,11 +97,11 @@ suite("Functional Tests", function() {
     });
     
     suite("DELETE", function() {
-      
+      //Needs setup and cleanup for removing other test threads and adding new ones with pre-set id's
     });
     
     suite("PUT", function() {
-      
+      //needs cleanup for threads
     });
     
 
