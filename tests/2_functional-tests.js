@@ -5,11 +5,15 @@
 *       -----[Keep the tests in the same order!]-----
 *       (if additional are added, keep them at the very end!)
 */
-
+/* eslint-disable */
 var chaiHttp = require("chai-http");
 var chai = require("chai");
 var assert = chai.assert;
 var server = require("../server");
+const MongoClient = require("mongodb");
+const ObjectId = require("mongodb").ObjectId;
+
+const DB_URL = process.env.DB; 
 
 chai.use(chaiHttp);
 
@@ -96,12 +100,79 @@ suite("Functional Tests", function() {
       }); 
     });
     
-    suite("DELETE", function() {
-      //Needs setup and cleanup for removing other test threads and adding new ones with pre-set id's
+    suite("DELETE", function() {      
+      let ids = ["5bd99119fb6fc074abb38e48", "5bd99152fb6fc074abb38e66"];
+      let items = [{_id: ObjectId(ids[0]), board: "test", delete_password: "1234"}, {_id: ObjectId(ids[1]), board: "test", delete_password: "1234"}];
+      
+      suiteSetup(function(done) {
+        MongoClient.connect(DB_URL, function(err, client) {
+          client.db("glitch").collection("feddle-chan").insertMany(items, (err, result) => {
+            if(err) console.log(err);
+            client.close();
+            done();
+          });
+        });
+      });
+
+      test("send correct fields",  function(done){
+        chai.request(server)
+          .delete("/api/threads/test")
+          .send({thread_id: ids[0], delete_password: "1234"})
+          .end(function(err, res){
+            assert.equal(res.status, 200);
+            assert.equal(res.text, "Success");
+            done();
+          });
+      }); 
+
+      test("send incorrect field",  function(done){
+        chai.request(server)
+          .delete("/api/threads/test")
+          .send({thread_id: ids[1], delete_password: "123"})
+          .end(function(err, res){
+            assert.equal(res.status, 400);
+            assert.equal(res.text, "Incorrect id or password");
+            done();
+          });
+      });
+
     });
     
     suite("PUT", function() {
-      //needs cleanup for threads
+      let id = "5bd99152fb6fc074abb38e66";
+
+      test("send correct id",  function(done){
+        chai.request(server)
+          .put("/api/threads/test")
+          .send({thread_id: id})
+          .end(function(err, res){
+            assert.equal(res.status, 200);
+            assert.equal(res.text, "Success");
+            done();
+          });
+      });
+
+      test("send incorrect id",  function(done){
+        chai.request(server)
+          .put("/api/threads/test")
+          .send({thread_id: "gibberwack"})
+          .end(function(err, res){
+            assert.equal(res.status, 400);
+            assert.equal(res.text, "Incorrect id");
+            done();
+          });
+      });
+
+    });
+
+    suiteTeardown(function(done) {
+      MongoClient.connect(DB_URL, function(err, client) {
+        client.db("glitch").collection("feddle-chan").deleteMany({board: "test"}, (err, result) => {
+          if(err) console.log(err);
+          client.close();
+          done();
+        });
+      });        
     });
     
 
