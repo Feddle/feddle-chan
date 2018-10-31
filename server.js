@@ -27,7 +27,7 @@ app.use(helmet({
   ieNoOpen: true,  
   hsts: {maxAge: ninetyDaysInMilliseconds, force: true},
   dnsPrefetchControl: true,
-  referrerPolicy: "same-origin",
+  referrerPolicy: {policy: "same-origin"},
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
