@@ -281,7 +281,7 @@ suite("Functional Tests", function() {
 
     });
     
-    suite.skip("GET", function() {
+    suite("GET", function() {
 
       test("send correct id",  function(done){
         chai.request(server)
@@ -308,6 +308,17 @@ suite("Functional Tests", function() {
           .end(function(err, res){
             assert.equal(res.status, 400);            
             assert.equal(res.text, "Incorrect id");      
+            done();
+          });
+      }); 
+
+      test("send id that doesn't exist",  function(done){
+        chai.request(server)
+          .get("/api/replies/test")
+          .query({thread_id: new ObjectId().toHexString()})
+          .end(function(err, res){
+            assert.equal(res.status, 400);            
+            assert.equal(res.text, "Thread not found");      
             done();
           });
       }); 
