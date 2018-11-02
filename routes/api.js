@@ -58,7 +58,7 @@ module.exports = function (app) {
       try {thread_id = ObjectId(req.body.thread_id);}
       catch(e) {res.status(400); res.send("Incorrect id"); return;}
       MongoClient.connect(DB_URL, function(err, client) {
-        client.db("glitch").collection("feddle-chan").updateOne({_id: thread_id}, {reported: true}, (err, result) => {
+        client.db("glitch").collection("feddle-chan").updateOne({_id: thread_id}, {$set: {reported: true}}, (err, result) => {
           if(err) res.send(err);                   
           if(!result.matchedCount) {res.status(400); res.send("Error occured");}
           else res.send("Success");
@@ -85,12 +85,33 @@ module.exports = function (app) {
     });
     
   app.route("/api/replies/:board")
+    .post((req, res) => {
+      let err = new Error();
+      if(!req.body.text) {err.message = "Text cannot be empty"; err.name = 400; throw err;}      
+      if(!req.body.thread_id) {err.message = "Incorrect id"; err.name = 400; throw err;}
+
+      let thread_id;      
+      try {thread_id = ObjectId(req.body.thread_id);} 
+      catch(e) {err.message = "Incorrect id"; err.name = 400; throw err;}
+      let _id = new ObjectId();
+      let created_on = new Date();
+      let delete_password = req.body.delete_password ? req.body.delete_password : "";
+      let text = req.body.text;
+      let reported = false;
+
+      MongoClient.connect(DB_URL, function(err, client) {                
+        let reply = {_id, text, created_on, delete_password, reported};
+        client.db("glitch").collection("feddle-chan").updateOne({_id: thread_id}, {$set: {bumped_on: created_on}, $push: {replies: reply}},
+          (err, result) => {                    
+            if(err) res.send(err);
+            if(!result.matchedCount) res.send("Error occured"); //Keep this for now
+            else res.send(reply);
+          });
+      });
+    })  
     .get((req, res) => {
 
-    })
-    .post((req, res) => {
-    
-    })
+    })    
     .put((req, res) => {
     
     })
