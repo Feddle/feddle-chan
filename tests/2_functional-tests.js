@@ -84,6 +84,7 @@ suite("Functional Tests", function() {
     });
     
     suite("GET", function() {
+
       test("list recent threads",  function(done){
         chai.request(server)
           .get("/api/threads/test")
@@ -96,18 +97,32 @@ suite("Functional Tests", function() {
             assert.property(res.body[0], "_id");
             assert.isOk(res.body[0].created_on, "created_on should be ok");
             assert.isOk(res.body[0].bumped_on, "bumped_on should be ok");
-            assert.notProperty(res.body[0].reported, "reported should not be be sent");
-            assert.notProperty(res.body[0].delete_password, "delete_password should not be be sent");
+            assert.notProperty(res.body[0], "reported", "reported should not be be sent");
+            assert.notProperty(res.body[0], "delete_password", "delete_password should not be be sent");
             assert.isArray(res.body[0].replies, "Replies should be an array");
-            assert.isAtMost(res.body.replies.length, 3);
+            assert.isAtMost(res.body[0].replies.length, 3);
             done();
           });
       }); 
+
+      test("no threads",  function(done){
+        chai.request(server)
+          .get("/api/threads/test1")
+          .end(function(err, res){
+            assert.equal(res.status, 200);
+            assert.equal(res.text, "No threads on board");
+            done();
+          });
+      }); 
+
     });
     
     suite("DELETE", function() {      
       let ids = ["5bd99119fb6fc074abb38e48", "5bd99152fb6fc074abb38e66"];
-      let items = [{_id: ObjectId(ids[0]), board: "test", delete_password: "1234"}, {_id: ObjectId(ids[1]), board: "test", delete_password: "1234"}];
+      let items = [
+        {_id: ObjectId(ids[0]), board: "test", delete_password: "1234"},
+        {_id: ObjectId(ids[1]), board: "test", delete_password: "1234", reported: false}
+      ];
       
       suiteSetup(function(done) {
         MongoClient.connect(DB_URL, function(err, client) {
@@ -273,8 +288,8 @@ suite("Functional Tests", function() {
             assert.property(res.body, "_id");
             assert.isOk(res.body.created_on, "created_on should be ok");
             assert.isOk(res.body.bumped_on, "bumped_on should be ok");
-            assert.notProperty(res.body.reported, "reported should not be be sent");
-            assert.notProperty(res.body.delete_password, "delete_password should not be be sent");
+            assert.notProperty(res.body, "reported", "reported should not be be sent");
+            assert.notProperty(res.body, "delete_password", "delete_password should not be be sent");
             assert.isArray(res.body.replies, "Replies should be an array");            
             done();
           });
