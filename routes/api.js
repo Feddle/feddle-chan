@@ -109,8 +109,20 @@ module.exports = function (app) {
           });
       });
     })  
-    .get((req, res) => {
+    .get((req, res, next) => {
+      let thread_id;            
+      try {
+        if(!req.query.thread_id) throw new Error();
+        thread_id = ObjectId(req.query.thread_id);
+      } catch(err) {err.message = "Incorrect id"; err.name = 400; next(err); return;}
 
+      MongoClient.connect(DB_URL, function(err, client) {
+        client.db("glitch").collection("feddle-chan").findOne({_id: thread_id}, {fields: {reported: 0, delete_password: 0}}, (err, result) => {                        
+          if(err) res.send(err);
+          if(!result) {let err = new Error("Thread not found"); err.name = 400; next(err);}                             
+          else res.send(result);
+        });
+      }); 
     })    
     .put((req, res) => {
     
