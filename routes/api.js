@@ -124,11 +124,45 @@ module.exports = function (app) {
         });
       }); 
     })    
-    .put((req, res) => {
-    
+    .put((req, res, next) => {
+      let thread_id;
+      let reply_id;
+      try {
+        if(!req.body.thread_id) throw new Error();
+        thread_id = ObjectId(req.body.thread_id);
+        reply_id = ObjectId(req.body.reply_id);
+      } catch(err) {err.message = "Incorrect id"; err.name = 400; next(err); return;}
+
+      MongoClient.connect(DB_URL, function(err, client) {
+        client.db("glitch").collection("feddle-chan").updateOne({_id: thread_id, "replies._id": reply_id}, {$set: {"replies.$.reported": true}}, (err, result) => {
+          if(err) res.send(err);                   
+          if(!result.matchedCount) {res.status(400); res.send("Error occured");}
+          else res.send("Success");
+        });
+      });
     })
-    .delete((req, res) => {
-    
+    .delete((req, res, next) => {
+      let thread_id;
+      let reply_id;
+      let dl_pswd;
+      try {
+        thread_id = ObjectId(req.body.thread_id);
+        reply_id = ObjectId(req.body.reply_id);
+        dl_pswd = req.body.delete_password;        
+        if(!thread_id || !dl_pswd || !reply_id) throw new Error();
+      }
+      catch(err) {err.message = "Incorrect id or password"; err.name = 400; next(err); return;}
+      
+      MongoClient.connect(DB_URL, function(err, client) {
+        client.db("glitch").collection("feddle-chan").updateOne(
+          {_id: thread_id, "replies._id": reply_id, "replies.delete_password": dl_pswd}, 
+          {$set: {"replies.$.text": "[deleted]"}},
+          (err, result) => {
+            if(err) res.send(err);               
+            if(!result.matchedCount) {res.status(400); res.send("Incorrect id or password");}
+            else res.send("Success");
+          });
+      });
     });
 
 };
