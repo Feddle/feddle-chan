@@ -326,9 +326,9 @@ suite("Functional Tests", function() {
     });
 
     
-    suite.skip("DELETE", function() {      
+    suite("DELETE", function() {      
       let ids = ["5bd9a07ffb6fc074abb398da", "5bd9a08cfb6fc074abb398e7"];
-      let items = [{_id: ObjectId(ids[0]), delete_password: "1234"}, {_id: ObjectId(ids[1]), delete_password: "1234"}];
+      let items = [{_id: ObjectId(ids[0]), delete_password: "1234", reported: false}, {_id: ObjectId(ids[1]), delete_password: "1234", reported: false}];
       
       suiteSetup(function(done) {
         MongoClient.connect(DB_URL, function(err, client) {
@@ -364,7 +364,7 @@ suite("Functional Tests", function() {
 
     });
     
-    suite.skip("PUT", function() {
+    suite("PUT", function() {
       let id = "5bd9a08cfb6fc074abb398e7";
 
       test("send correct id",  function(done){
