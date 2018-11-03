@@ -11,8 +11,8 @@ const DB_URL = process.env.DB;
 module.exports = function (app) {
   
   app.route("/api/threads/:board")    
-    .post((req, res) => {
-      if(!req.body.text) {res.status(400); res.send("Text cannot be empty"); return;}
+    .post((req, res, next) => {
+      if(!req.body.text) {let err = new Error("Text cannot be empty"); err.statuscode = 400; throw err;}
 
       MongoClient.connect(DB_URL, function(err, client) {
         let today = new Date();
@@ -28,7 +28,7 @@ module.exports = function (app) {
         }, 
         (err, result) => {                    
           if(err) res.send(err);
-          if(result.ops.length === 0) res.send("Error occured"); //Keep this for now
+          if(result.ops.length === 0) {let err = new Error("Error occured"); err.statuscode = 400; next(err);} //Keep this for now
           else res.send(result.ops[0]);
         });
       });
@@ -53,46 +53,48 @@ module.exports = function (app) {
           });
       }); 
     })
-    .put((req, res) => {
+    .put((req, res, next) => {
       let thread_id;
+      let err = new Error();
       try {thread_id = ObjectId(req.body.thread_id);}
-      catch(e) {res.status(400); res.send("Incorrect id"); return;}
+      catch(e) {err.message = "Incorrect id"; err.statuscode = 400; next(err); return;}
       MongoClient.connect(DB_URL, function(err, client) {
         client.db("glitch").collection("feddle-chan").updateOne({_id: thread_id}, {$set: {reported: true}}, (err, result) => {
           if(err) res.send(err);                   
-          if(!result.matchedCount) {res.status(400); res.send("Error occured");}
+          if(!result.matchedCount) {let err = new Error("Error occured"); err.statuscode = 400; next(err);} //Keep this for now
           else res.send("Success");
         });
       });
     })
-    .delete((req, res) => {
+    .delete((req, res, next) => {
       let thread_id;
       let dl_pswd;
+      let err = new Error();
       try {
         thread_id = ObjectId(req.body.thread_id);
         dl_pswd = req.body.delete_password;
-        if(!thread_id || !dl_pswd) {res.status(400); res.send("Incorrect id or password"); return;}
+        if(!thread_id || !dl_pswd) {err.message = "Incorrect id or password"; err.statuscode = 400; throw err;}
       }
-      catch(e) {res.status(400); res.send("Incorrect id or password"); return;}
+      catch(e) {err.message = "Incorrect id or password"; err.statuscode = 400; next(err); return;}
       
       MongoClient.connect(DB_URL, function(err, client) {
         client.db("glitch").collection("feddle-chan").deleteOne({_id: thread_id, delete_password: dl_pswd}, {reported: true}, (err, result) => {
           if(err) res.send(err);               
-          if(!result.deletedCount) {res.status(400); res.send("Incorrect id or password");}
+          if(!result.deletedCount) {let err = new Error("Incorrect id or password"); err.statuscode = 400; next(err);}
           else res.send("Success");
         });
       });
     });
     
   app.route("/api/replies/:board")
-    .post((req, res) => {
+    .post((req, res, next) => {
       let err = new Error();
-      if(!req.body.text) {err.message = "Text cannot be empty"; err.name = 400; throw err;}      
-      if(!req.body.thread_id) {err.message = "Incorrect id"; err.name = 400; throw err;}
+      if(!req.body.text) {err.message = "Text cannot be empty"; err.statuscode = 400; throw err;}      
+      if(!req.body.thread_id) {err.message = "Incorrect id"; err.statuscode = 400; throw err;}
 
       let thread_id;      
       try {thread_id = ObjectId(req.body.thread_id);} 
-      catch(e) {err.message = "Incorrect id"; err.name = 400; throw err;}
+      catch(e) {err.message = "Incorrect id"; err.statuscode = 400; next(err); return;}
       let _id = new ObjectId();
       let created_on = new Date();
       let delete_password = req.body.delete_password ? req.body.delete_password : "";
@@ -104,7 +106,7 @@ module.exports = function (app) {
         client.db("glitch").collection("feddle-chan").updateOne({_id: thread_id}, {$set: {bumped_on: created_on}, $push: {replies: reply}},
           (err, result) => {                    
             if(err) res.send(err);
-            if(!result.matchedCount) res.send("Error occured"); //Keep this for now
+            if(!result.matchedCount) {let err = new Error("Error occured"); err.statuscode = 400; next(err);} //Keep this for now
             else res.send(reply);
           });
       });
@@ -114,12 +116,12 @@ module.exports = function (app) {
       try {
         if(!req.query.thread_id) throw new Error();
         thread_id = ObjectId(req.query.thread_id);
-      } catch(err) {err.message = "Incorrect id"; err.name = 400; next(err); return;}
+      } catch(err) {err.message = "Incorrect id"; err.statuscode = 400; next(err); return;}
 
       MongoClient.connect(DB_URL, function(err, client) {
         client.db("glitch").collection("feddle-chan").findOne({_id: thread_id}, {fields: {reported: 0, delete_password: 0}}, (err, result) => {                        
           if(err) res.send(err);
-          if(!result) {let err = new Error("Thread not found"); err.name = 400; next(err);}                             
+          if(!result) {let err = new Error("Thread not found"); err.statuscode = 400; next(err);}                             
           else res.send(result);
         });
       }); 
@@ -131,12 +133,12 @@ module.exports = function (app) {
         if(!req.body.thread_id) throw new Error();
         thread_id = ObjectId(req.body.thread_id);
         reply_id = ObjectId(req.body.reply_id);
-      } catch(err) {err.message = "Incorrect id"; err.name = 400; next(err); return;}
+      } catch(err) {err.message = "Incorrect id"; err.statuscode = 400; next(err); return;}
 
       MongoClient.connect(DB_URL, function(err, client) {
         client.db("glitch").collection("feddle-chan").updateOne({_id: thread_id, "replies._id": reply_id}, {$set: {"replies.$.reported": true}}, (err, result) => {
           if(err) res.send(err);                   
-          if(!result.matchedCount) {res.status(400); res.send("Error occured");}
+          if(!result.matchedCount) {let err = new Error("Incorrect id"); err.statuscode = 400; next(err);}
           else res.send("Success");
         });
       });
@@ -151,15 +153,15 @@ module.exports = function (app) {
         dl_pswd = req.body.delete_password;        
         if(!thread_id || !dl_pswd || !reply_id) throw new Error();
       }
-      catch(err) {err.message = "Incorrect id or password"; err.name = 400; next(err); return;}
+      catch(err) {err.message = "Incorrect id or password"; err.statuscode = 400; next(err); return;}
       
       MongoClient.connect(DB_URL, function(err, client) {
         client.db("glitch").collection("feddle-chan").updateOne(
           {_id: thread_id, "replies._id": reply_id, "replies.delete_password": dl_pswd}, 
           {$set: {"replies.$.text": "[deleted]"}},
           (err, result) => {
-            if(err) res.send(err);               
-            if(!result.matchedCount) {res.status(400); res.send("Incorrect id or password");}
+            if(err) res.send(err);  //This should propably be something else          
+            if(!result.matchedCount) {let err = new Error("Incorrect id or password"); err.statuscode = 400; next(err);}
             else res.send("Success");
           });
       });

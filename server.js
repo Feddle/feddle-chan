@@ -80,7 +80,7 @@ app.use(function(req, res, next) {
 });
 
 app.use(function (err, req, res, next) {  
-  res.status(err.name).send(err.message);
+  res.status(err.statuscode).send(err.message);
 });
 
 //Start our server and tests!
